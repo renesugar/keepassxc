@@ -15,32 +15,49 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NATIVEMESSAGINGHOST_H
-#define NATIVEMESSAGINGHOST_H
+#ifndef NATIVEMESSAGINGPROXY_H
+#define NATIVEMESSAGINGPROXY_H
 
-#include "NativeMessagingBase.h"
+#include <QDataStream>
+#include <QObject>
+#include <QLocalSocket>
+#include <QPointer>
 
-class NativeMessagingHost : public NativeMessagingBase
+class QWinEventNotifier;
+class QSocketNotifier;
+
+class NativeMessagingProxy : public QObject
 {
     Q_OBJECT
 public:
-    NativeMessagingHost();
-    ~NativeMessagingHost() override;
+    NativeMessagingProxy();
+    ~NativeMessagingProxy() override;
+
+signals:
+    void stdinMessage(QString msg);
 
 public slots:
     void newLocalMessage();
     void deleteSocket();
-    void socketStateChanged(QLocalSocket::LocalSocketState socketState);
+    void processStandardInput(const QString& msg);
 
 private:
-    void readNativeMessages() override;
-    void readLength() override;
-    bool readStdIn(const quint32 length) override;
+    void setupStandardInput();
+    void setupLocalSocket();
+    void readStdin();
 
 private:
-    QLocalSocket* m_localSocket;
+    bool m_running = false;
+    QPointer<QLocalSocket> m_localSocket;
+    QDataStream m_stdout;
 
-    Q_DISABLE_COPY(NativeMessagingHost)
+#ifdef Q_OS_WIN
+    QPointer<QWinEventNotifier> m_notifier;
+#else
+    QPointer<QSocketNotifier> m_notifier;
+#endif
+
+    Q_DISABLE_COPY(NativeMessagingProxy)
 };
 
-#endif // NATIVEMESSAGINGHOST_H
+#endif // NATIVEMESSAGINGPROXY_H

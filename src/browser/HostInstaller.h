@@ -36,26 +36,25 @@ public:
         VIVALDI = 3,
         TOR_BROWSER = 4,
         BRAVE = 5,
-        EDGE = 6
+        EDGE = 6,
+        MAX_SUPPORTED
     };
 
 public:
     HostInstaller();
     bool checkIfInstalled(SupportedBrowsers browser);
-    bool checkIfProxyExists(const bool& proxy, const QString& location, QString& path) const;
+    QString getProxyPath(const QString& location) const;
     void installBrowser(SupportedBrowsers browser,
                         const bool& enabled,
-                        const bool& proxy = false,
                         const QString& location = "");
-    void updateBinaryPaths(const bool& proxy, const QString& location = "");
+    void updateBinaryPaths(const QString& location = "");
 
 private:
     QString getTargetPath(SupportedBrowsers browser) const;
     QString getBrowserName(SupportedBrowsers browser) const;
     QString getPath(SupportedBrowsers browser) const;
     QString getInstallDir(SupportedBrowsers browser) const;
-    QString getProxyPath(const bool& proxy, const QString& location) const;
-    QJsonObject constructFile(SupportedBrowsers browser, const bool& proxy, const QString& location);
+    QJsonObject constructFile(SupportedBrowsers browser, const QString& location);
     bool registryEntryFound(const QSettings& settings);
     bool saveFile(SupportedBrowsers browser, const QJsonObject& script);
 

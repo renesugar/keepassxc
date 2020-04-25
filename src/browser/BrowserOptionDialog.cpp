@@ -116,7 +116,6 @@ void BrowserOptionDialog::loadSettings()
     m_ui->searchInAllDatabases->setChecked(settings->searchInAllDatabases());
     m_ui->supportKphFields->setChecked(settings->supportKphFields());
     m_ui->noMigrationPrompt->setChecked(settings->noMigrationPrompt());
-    m_ui->supportBrowserProxy->setChecked(settings->supportBrowserProxy());
     m_ui->useCustomProxy->setChecked(settings->useCustomProxy());
     m_ui->customProxyLocation->setText(settings->customProxyLocation());
     m_ui->updateBinaryPath->setChecked(settings->updateBinaryPath());
@@ -161,8 +160,8 @@ void BrowserOptionDialog::loadSettings()
 #endif
 
     // Check for native messaging host location errors
-    QString path;
-    if (!settings->checkIfProxyExists(path)) {
+    auto path = settings->proxyLocation();
+    if (!QFile::exists(path)) {
         auto text =
             tr("<b>Warning</b>, the keepassxc-proxy application was not found!"
                "<br />Please check the KeePassXC installation directory or confirm the custom path in advanced options."
@@ -186,7 +185,6 @@ void BrowserOptionDialog::saveSettings()
     settings->setMatchUrlScheme(m_ui->matchUrlScheme->isChecked());
     settings->setSortByUsername(m_ui->sortByUsername->isChecked());
 
-    settings->setSupportBrowserProxy(m_ui->supportBrowserProxy->isChecked());
     settings->setUseCustomProxy(m_ui->useCustomProxy->isChecked());
     settings->setCustomProxyLocation(m_ui->customProxyLocation->text());
 

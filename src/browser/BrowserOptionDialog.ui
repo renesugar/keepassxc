@@ -352,16 +352,6 @@
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="supportBrowserProxy">
-         <property name="toolTip">
-          <string>Support a proxy application between KeePassXC and browser extension.</string>
-         </property>
-         <property name="text">
-          <string>Use a proxy application between KeePassXC and browser extension</string>
-         </property>
-        </widget>
-       </item>
-       <item>
         <widget class="QCheckBox" name="useCustomProxy">
          <property name="toolTip">
           <string>Use a custom proxy location if you installed a proxy manually.</string>

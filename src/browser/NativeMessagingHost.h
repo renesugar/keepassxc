@@ -21,28 +21,22 @@
 
 #include "BrowserClients.h"
 #include "BrowserService.h"
-#include "NativeMessagingBase.h"
 #include "gui/DatabaseTabWidget.h"
 
-class NativeMessagingHost : public NativeMessagingBase
+class QLocalServer;
+
+class NativeMessagingHost : public QObject
 {
     Q_OBJECT
 
-    typedef QList<QLocalSocket*> SocketList;
-
 public:
-    explicit NativeMessagingHost(DatabaseTabWidget* parent = nullptr, const bool enabled = false);
+    explicit NativeMessagingHost(DatabaseTabWidget* parent = nullptr);
     ~NativeMessagingHost() override;
-    int init();
-    void run();
+
+    void start();
     void stop();
 
-signals:
-    void quit();
-
 private:
-    void readLength() override;
-    bool readStdIn(const quint32 length) override;
     void sendReplyToAllClients(const QJsonObject& json);
 
 private slots:
@@ -53,11 +47,10 @@ private slots:
     void disconnectSocket();
 
 private:
-    QMutex m_mutex;
     BrowserService m_browserService;
     BrowserClients m_browserClients;
-    QSharedPointer<QLocalServer> m_localServer;
-    SocketList m_socketList;
+    QPointer<QLocalServer> m_localServer;
+    QList<QLocalSocket*> m_socketList;
 };
 
 #endif // NATIVEMESSAGINGHOST_H

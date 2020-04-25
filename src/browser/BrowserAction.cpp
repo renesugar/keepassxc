@@ -18,7 +18,7 @@
 
 #include "BrowserAction.h"
 #include "BrowserSettings.h"
-#include "NativeMessagingBase.h"
+#include "BrowserShared.h"
 #include "config-keepassx.h"
 
 #include <QJsonDocument>
@@ -598,7 +598,7 @@ QString BrowserAction::encrypt(const QString& plaintext, const QString& nonce)
     std::vector<unsigned char> sk(sa.cbegin(), sa.cend());
 
     std::vector<unsigned char> e;
-    e.resize(NATIVE_MSG_MAX_LENGTH);
+    e.resize(Browser::NATIVEMSG_MAX_LENGTH);
 
     if (m.empty() || n.empty() || ck.empty() || sk.empty()) {
         return QString();
@@ -626,7 +626,7 @@ QByteArray BrowserAction::decrypt(const QString& encrypted, const QString& nonce
     std::vector<unsigned char> sk(sa.cbegin(), sa.cend());
 
     std::vector<unsigned char> d;
-    d.resize(NATIVE_MSG_MAX_LENGTH);
+    d.resize(Browser::NATIVEMSG_MAX_LENGTH);
 
     if (m.empty() || n.empty() || ck.empty() || sk.empty()) {
         return QByteArray();

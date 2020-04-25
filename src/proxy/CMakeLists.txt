@@ -1,5 +1,4 @@
-#  Copyright (C) 2017 Sami Vänttinen <sami.vanttinen@protonmail.com>
-#  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
+#  Copyright (C) 2020 KeePassXC Team <team@keepassxc.org>
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -15,16 +14,14 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 if(WITH_XC_BROWSER)
-    include_directories(${BROWSER_SOURCE_DIR})
-
     set(proxy_SOURCES
-        ../core/Alloc.cpp
+        ../browser/BrowserShared.cpp
         keepassxc-proxy.cpp
-        ${BROWSER_SOURCE_DIR}/NativeMessagingBase.cpp
-        NativeMessagingHost.cpp)
+        NativeMessagingProxy.cpp)
 
     add_library(proxy STATIC ${proxy_SOURCES})
-    target_link_libraries(proxy Qt5::Core Qt5::Network ${sodium_LIBRARY_RELEASE})
+    target_link_libraries(proxy Qt5::Core Qt5::Network)
+
     add_executable(keepassxc-proxy keepassxc-proxy.cpp)
     target_link_libraries(keepassxc-proxy proxy)
 
@@ -44,8 +41,6 @@ if(WITH_XC_BROWSER)
                                     "@executable_path/../Frameworks/QtNetwork.framework/Versions/5/QtNetwork"
                                 -change /usr/local/opt/qt/lib/QtNetwork.framework/Versions/5/QtNetwork
                                     "@executable_path/../Frameworks/QtNetwork.framework/Versions/5/QtNetwork"
-                                -change /usr/local/opt/libsodium/lib/libsodium.23.dylib
-                                    "@executable_path/../Frameworks/libsodium.23.dylib"
                            keepassxc-proxy
                            COMMENT "Changing linking of keepassxc-proxy")
 

@@ -26,8 +26,8 @@ if(WITH_XC_BROWSER)
             BrowserOptionDialog.cpp
             BrowserService.cpp
             BrowserSettings.cpp
+            BrowserShared.cpp
             HostInstaller.cpp
-            NativeMessagingBase.cpp
             NativeMessagingHost.cpp
             Variant.cpp)
 

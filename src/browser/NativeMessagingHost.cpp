@@ -18,27 +18,26 @@
 
 #include "NativeMessagingHost.h"
 #include "BrowserSettings.h"
-#include "sodium.h"
+#include "BrowserShared.h"
+
+#include <QJsonDocument>
 #include <QMutexLocker>
 #include <QtNetwork>
+
+#include "sodium.h"
 #include <iostream>
 
-#ifdef Q_OS_WIN
-#include <Winsock2.h>
-#endif
-
-NativeMessagingHost::NativeMessagingHost(DatabaseTabWidget* parent, const bool enabled)
-    : NativeMessagingBase(enabled)
-    , m_mutex(QMutex::Recursive)
+NativeMessagingHost::NativeMessagingHost(DatabaseTabWidget* parent)
+    : QObject(parent)
     , m_browserService(parent)
     , m_browserClients(m_browserService)
 {
-    m_localServer.reset(new QLocalServer(this));
+    m_localServer = new QLocalServer(this);
     m_localServer->setSocketOptions(QLocalServer::UserAccessOption);
-    m_running.store(0);
+    connect(m_localServer.data(), SIGNAL(newConnection()), this, SLOT(newLocalConnection()));
 
-    if (browserSettings()->isEnabled() && m_running.load() == 0) {
-        run();
+    if (browserSettings()->isEnabled()) {
+        start();
     }
 
     connect(&m_browserService, SIGNAL(databaseLocked()), this, SLOT(databaseLocked()));
@@ -50,16 +49,10 @@ NativeMessagingHost::~NativeMessagingHost()
     stop();
 }
 
-int NativeMessagingHost::init()
+void NativeMessagingHost::start()
 {
-    QMutexLocker locker(&m_mutex);
-    return sodium_init();
-}
-
-void NativeMessagingHost::run()
-{
-    QMutexLocker locker(&m_mutex);
-    if (m_running.load() == 0 && init() == -1) {
+    if (sodium_init() == -1) {
+        qWarning() << "Failed to start browser service: libsodium failed to initialize!";
         return;
     }
 
@@ -69,77 +62,14 @@ void NativeMessagingHost::run()
             browserSettings()->useCustomProxy() ? browserSettings()->customProxyLocation() : "");
     }
 
-    m_running.store(1);
-#ifdef Q_OS_WIN
-    m_future =
-        QtConcurrent::run(this, static_cast<void (NativeMessagingHost::*)()>(&NativeMessagingHost::readNativeMessages));
-#endif
-
-    if (browserSettings()->supportBrowserProxy()) {
-        QString serverPath = getLocalServerPath();
-        QFile::remove(serverPath);
-
-        // Ensure that STDIN is not being listened when proxy is used
-        if (m_notifier && m_notifier->isEnabled()) {
-            m_notifier->setEnabled(false);
-        }
-
-        if (m_localServer->isListening()) {
-            m_localServer->close();
-        }
-
-        m_localServer->listen(serverPath);
-        connect(m_localServer.data(), SIGNAL(newConnection()), this, SLOT(newLocalConnection()));
-    } else {
-        m_localServer->close();
-    }
+    m_localServer->listen(Browser::localServerPath());
 }
 
 void NativeMessagingHost::stop()
 {
     databaseLocked();
-    QMutexLocker locker(&m_mutex);
     m_socketList.clear();
-    m_running.testAndSetOrdered(1, 0);
-    m_future.waitForFinished();
     m_localServer->close();
-}
-
-void NativeMessagingHost::readLength()
-{
-    quint32 length = 0;
-    std::cin.read(reinterpret_cast<char*>(&length), 4);
-    if (!std::cin.eof() && length > 0) {
-        readStdIn(length);
-    } else {
-        m_notifier->setEnabled(false);
-    }
-}
-
-bool NativeMessagingHost::readStdIn(const quint32 length)
-{
-    if (length <= 0) {
-        return false;
-    }
-
-    QByteArray arr;
-    arr.reserve(length);
-
-    QMutexLocker locker(&m_mutex);
-
-    for (quint32 i = 0; i < length; ++i) {
-        int c = std::getchar();
-        if (c == EOF) {
-            // message ended prematurely, ignore it and return
-            return false;
-        }
-        arr.append(static_cast<char>(c));
-    }
-
-    if (arr.length() > 0) {
-        sendReply(m_browserClients.readResponse(arr));
-    }
-    return true;
 }
 
 void NativeMessagingHost::newLocalConnection()
@@ -158,26 +88,20 @@ void NativeMessagingHost::newLocalMessage()
         return;
     }
 
-    socket->setReadBufferSize(NATIVE_MSG_MAX_LENGTH);
-    int socketDesc = socket->socketDescriptor();
-    if (socketDesc) {
-        int max = NATIVE_MSG_MAX_LENGTH;
-        setsockopt(socketDesc, SOL_SOCKET, SO_SNDBUF, reinterpret_cast<char*>(&max), sizeof(max));
-    }
+    socket->setReadBufferSize(Browser::NATIVEMSG_MAX_LENGTH);
 
     QByteArray arr = socket->readAll();
     if (arr.isEmpty()) {
         return;
     }
 
-    QMutexLocker locker(&m_mutex);
     if (!m_socketList.contains(socket)) {
         m_socketList.push_back(socket);
     }
 
-    QString reply = jsonToString(m_browserClients.readResponse(arr));
+    QString reply(QJsonDocument(m_browserClients.readResponse(arr)).toJson(QJsonDocument::Compact));
     if (socket && socket->isValid() && socket->state() == QLocalSocket::ConnectedState) {
-        QByteArray arr = reply.toUtf8();
+        arr = reply.toUtf8();
         socket->write(arr.constData(), arr.length());
         socket->flush();
     }
@@ -185,8 +109,7 @@ void NativeMessagingHost::newLocalMessage()
 
 void NativeMessagingHost::sendReplyToAllClients(const QJsonObject& json)
 {
-    QString reply = jsonToString(json);
-    QMutexLocker locker(&m_mutex);
+    QString reply(QJsonDocument(json).toJson(QJsonDocument::Compact));
     for (const auto socket : m_socketList) {
         if (socket && socket->isValid() && socket->state() == QLocalSocket::ConnectedState) {
             QByteArray arr = reply.toUtf8();
@@ -199,7 +122,6 @@ void NativeMessagingHost::sendReplyToAllClients(const QJsonObject& json)
 void NativeMessagingHost::disconnectSocket()
 {
     QLocalSocket* socket(qobject_cast<QLocalSocket*>(QObject::sender()));
-    QMutexLocker locker(&m_mutex);
     for (auto s : m_socketList) {
         if (s == socket) {
             m_socketList.removeOne(s);

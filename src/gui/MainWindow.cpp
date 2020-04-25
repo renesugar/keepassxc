@@ -88,8 +88,7 @@ class BrowserPlugin : public ISettingsPage
 public:
     explicit BrowserPlugin(DatabaseTabWidget* tabWidget)
     {
-        m_nativeMessagingHost =
-            QSharedPointer<NativeMessagingHost>(new NativeMessagingHost(tabWidget, browserSettings()->isEnabled()));
+        m_nativeMessagingHost = QSharedPointer<NativeMessagingHost>(new NativeMessagingHost(tabWidget));
     }
 
     ~BrowserPlugin()
@@ -121,7 +120,7 @@ public:
     {
         qobject_cast<BrowserOptionDialog*>(widget)->saveSettings();
         if (browserSettings()->isEnabled()) {
-            m_nativeMessagingHost->run();
+            m_nativeMessagingHost->start();
         } else {
             m_nativeMessagingHost->stop();
         }

@@ -58,12 +58,11 @@ public:
     bool noMigrationPrompt();
     void setNoMigrationPrompt(bool prompt);
 
-    bool supportBrowserProxy();
-    void setSupportBrowserProxy(bool enabled);
     bool useCustomProxy();
     void setUseCustomProxy(bool enabled);
     QString customProxyLocation();
     void setCustomProxyLocation(const QString& location);
+    QString proxyLocation();
     bool updateBinaryPath();
     void setUpdateBinaryPath(bool enabled);
     bool allowExpiredCredentials();
@@ -127,7 +126,6 @@ public:
     PasswordGenerator::GeneratorFlags passwordGeneratorFlags();
     QJsonObject generatePassword();
     void updateBinaryPaths(const QString& customProxyLocation = QString());
-    bool checkIfProxyExists(QString& path);
 
 private:
     static BrowserSettings* m_instance;
